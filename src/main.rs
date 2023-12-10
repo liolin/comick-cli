@@ -1,7 +1,7 @@
 use anyhow::Result;
+use comick;
 use tracing::Level;
 use tracing_subscriber::FmtSubscriber;
-use comick;
 
 #[tokio::main]
 async fn main() -> Result<()> {

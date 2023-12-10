@@ -47,34 +47,36 @@ impl Execute for Download {
         for url in self.urls {
             let info = parse_url(&url)?;
             c.goto(&url).await?;
-            let mut imgs;
-            loop {
-                imgs = c.find_all(Locator::Css(".reader-container img")).await?;
-                if imgs.len() != 0 {
-                    break;
-                }
-            }
-            info!("Found {} images", imgs.len());
+            let img_urls = c
+                .find_all(Locator::Css(".reader-container img"))
+                .await?
+                .into_iter()
+                .map(|e| async move { e.attr("src").await })
+                .collect::<Vec<_>>();
+            info!("Found {} images", img_urls.len());
 
-            let len = imgs.len();
-            for (i, img) in imgs.into_iter().enumerate() {
-                let file_name = build_file_path(&info, i, &self.output);
-                info!("Start downloading image {} of {}", i + 1, len + 1);
-                info!("Create file: {file_name}");
-
-                let mut file = File::create(file_name).await?;
-                let src = img.attr("src").await?.expect("image should have a src");
-
-                info!("Request image");
-                let mut response = reqwest::get(src).await?;
-                while let Some(chunk) = response.chunk().await? {
-                    file.write(&chunk).await?;
+            for (i, img) in img_urls.into_iter().enumerate() {
+                if let Ok(Some(url)) = img.await {
+                    download(&build_file_path(&info, i, &self.output), &url).await?;
                 }
             }
         }
         c.close().await?;
         Ok(())
     }
+}
+
+async fn download(file_name: &str, url: &str) -> Result<()> {
+    info!("Create file: {file_name}");
+    let mut file = File::create(file_name).await?;
+
+    info!("Request image");
+    let mut response = reqwest::get(url).await?;
+    while let Some(chunk) = response.chunk().await? {
+        file.write(&chunk).await?;
+    }
+
+    Ok(())
 }
 
 fn start_webdriver(driver: &str) -> Result<()> {

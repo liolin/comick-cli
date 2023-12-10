@@ -56,8 +56,6 @@ struct ComickInformation<'a> {
     language: Option<&'a str>,
 }
 
-
-
 pub async fn cli_entrypoint() {
     let cli = Cli::parse();
 
