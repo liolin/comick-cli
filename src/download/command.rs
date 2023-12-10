@@ -1,10 +1,12 @@
 use crate::{ComickInformation, Execute};
 
 use anyhow::{bail, Result};
-use fantoccini::{ClientBuilder, Locator};
+use fantoccini::{Client, ClientBuilder, Locator};
+use futures_util::TryStreamExt;
 use thiserror::Error;
 use tracing::{debug, info};
 
+use futures::stream::{self, StreamExt};
 use tokio::{fs::File, io::AsyncWriteExt};
 
 #[derive(Clone, Debug, clap::Parser)]
@@ -47,23 +49,29 @@ impl Execute for Download {
         for url in self.urls {
             let info = parse_url(&url)?;
             c.goto(&url).await?;
-            let img_urls = c
-                .find_all(Locator::Css(".reader-container img"))
-                .await?
-                .into_iter()
-                .map(|e| async move { e.attr("src").await })
-                .collect::<Vec<_>>();
-            info!("Found {} images", img_urls.len());
+            let img_urls = extract_urls(&c).await?;
 
             for (i, img) in img_urls.into_iter().enumerate() {
-                if let Ok(Some(url)) = img.await {
-                    download(&build_file_path(&info, i, &self.output), &url).await?;
-                }
+                download(&build_file_path(&info, i, &self.output), &img).await?;
             }
         }
         c.close().await?;
         Ok(())
     }
+}
+async fn extract_urls(client: &Client) -> Result<Vec<String>> {
+    Ok(stream::iter(
+        client
+            .find_all(Locator::Css(".reader-container img"))
+            .await?
+            .into_iter(),
+    )
+    .then(|e| async move { e.attr("src").await })
+    .try_collect::<Vec<_>>()
+    .await?
+    .into_iter()
+    .flat_map(|e| e)
+    .collect())
 }
 
 async fn download(file_name: &str, url: &str) -> Result<()> {
