@@ -1,15 +1,18 @@
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 use std::env;
-use tracing::{debug, error};
+use tracing::error;
 
+mod api;
 mod download;
+mod archive;
 
 use download::Download;
+use archive::Archive;
 
 #[derive(Debug, Parser)]
 #[clap(author, version = version(), about)]
-pub struct Cli {
+struct Cli {
     #[clap(flatten)]
     verbosity: Option<Verbosity>,
 
@@ -31,7 +34,7 @@ fn version() -> String {
 
 #[derive(Debug, Subcommand)]
 enum Command {
-    Archive,
+    Archive(Archive),
     Download(Download),
 }
 
@@ -49,20 +52,10 @@ struct Verbosity {
     quiet: bool,
 }
 
-struct ComickInformation<'a> {
-    series_name: &'a str,
-    slug: Option<&'a str>,
-    chapter_number: Option<&'a str>,
-    language: Option<&'a str>,
-}
-
 pub async fn cli_entrypoint() {
     let cli = Cli::parse();
-
-    debug!("cli input: {:?}", cli);
-
     match cli.command {
-        Command::Archive => (),
+        Command::Archive(archive) => execute_executor(archive).await,
         Command::Download(download) => execute_executor(download).await,
     }
 }
