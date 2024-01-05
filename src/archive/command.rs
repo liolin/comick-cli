@@ -9,7 +9,7 @@ use tracing::{debug, info};
 use tokio::{fs::File, io::AsyncWriteExt};
 
 #[derive(Clone, Debug, clap::Parser)]
-#[clap(about = "Download a chapter")]
+#[clap(about = "Download a whole comic")]
 #[command(arg_required_else_help(true))]
 pub struct Archive {
     #[arg(help = "Name of the output file")]
