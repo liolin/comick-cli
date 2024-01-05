@@ -24,7 +24,7 @@ pub struct FirstChapter {}
 
 #[derive(Deserialize, Debug)]
 pub struct Comic {
-    // pub id: u32,
+    pub id: u32,
     pub hid: String,
     pub title: String,
     pub country: String,
@@ -32,7 +32,7 @@ pub struct Comic {
     pub links: HashMap<String, String>,
     pub last_chapter: f32,
     pub chapter_count: u32,
-    pub demographic: Option<Demographic>,
+    // pub demographic: Option<Demographic>, // TODO: For some reason is this not a string but an int
     pub hentai: bool,
     pub user_follow_count: u32,
     pub follow_rank: u32,

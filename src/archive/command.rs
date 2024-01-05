@@ -94,13 +94,10 @@ impl Execute for Archive {
             debug!("Image urls: {}", images.join(","));
 
             for (i, name) in images.iter().enumerate() {
-                let filename = prepare_filename(&self.output, &comic_response, &chapter_response, i);
+                let filename =
+                    prepare_filename(&self.output, &comic_response, &chapter_response, i);
                 create_folder_structure(&filename)?;
-                download(
-                    &filename,
-                    &format!("{}/{}", self.image_url, name),
-                )
-                .await?;
+                download(&filename, &format!("{}/{}", self.image_url, name)).await?;
             }
         }
         Ok(())
@@ -127,13 +124,16 @@ fn prepare_filename(
     let vol = chapter_info.chapter.vol.clone().unwrap_or("none".into());
     format
         .replace("{series_name}", &comic_info.comic.title)
-        .replace("{volume_number}", &format!("{:0>3}", vol))
-        .replace("{chapter_number}", &format!("{:0>3}", chapter_info.chapter.chap))
+        .replace("{volume_number}", &format_number(&vol))
+        .replace(
+            "{chapter_number}",
+            &format_number(&chapter_info.chapter.chap)
+        )
         .replace("{image_seq}", &format!("{:0>3}", seq.to_string()))
 }
 
 fn create_folder_structure(path: &str) -> Result<()> {
-    if let Some((folders,_)) = path.rsplit_once('/') {
+    if let Some((folders, _)) = path.rsplit_once('/') {
         if folders.len() > 0 {
             std::fs::create_dir_all(folders)?;
         }
@@ -141,13 +141,11 @@ fn create_folder_structure(path: &str) -> Result<()> {
     Ok(())
 }
 
-#[cfg(test)]
-mod test {
-    #[test]
-    fn create_blub() {
-        let volumen_number = "1";
-        let with_leading_zero = 
-
-        assert_eq!("001", &with_leading_zero);
+fn format_number(number: &str) -> String {
+    let (ch, subch) = number.split_once('.').unwrap_or((number, ""));
+    if subch.len() == 0 {
+        format!("{:0>3}", ch)
+    } else {
+        format!("{:0>3}.{}", ch, subch)
     }
 }
